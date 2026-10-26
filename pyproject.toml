@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "malware-analysis-agent"
+version = "0.1.0"
+description = "Local-first defensive static analysis for Windows PE files"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pefile",
+    "lief",
+    "pydantic",
+    "typer",
+    "rich",
+    "PyYAML",
+    "python-dotenv",
+    "yara-python",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "build",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false

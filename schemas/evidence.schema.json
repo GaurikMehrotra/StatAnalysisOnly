@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/malware-analysis-report-v1.schema.json",
+  "title": "Malware Analysis Report",
+  "description": "Version 1 report for local static analysis of Windows PE files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "analysis_status",
+    "file",
+    "evidence",
+    "findings",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "analysis_status": {
+      "enum": ["completed", "partial", "rejected", "failed"]
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "size_bytes", "sha256", "format"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "size_bytes": {"type": "integer", "minimum": 0, "maximum": 104857600},
+        "sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "format": {"enum": ["PE", "unknown"]}
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "category",
+          "description",
+          "source",
+          "confidence",
+          "caveats"
+        ],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "category": {"type": "string", "minLength": 1},
+          "description": {"type": "string"},
+          "source": {"type": "string", "minLength": 1},
+          "value": {},
+          "confidence": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "caveats": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "severity", "evidence_ids", "rationale"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "severity": {
+            "enum": ["informational", "low", "medium", "high", "critical", "unknown"]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string"}
+          },
+          "rationale": {"type": "string"},
+          "mitre_attack": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}
