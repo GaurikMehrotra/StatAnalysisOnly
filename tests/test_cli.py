@@ -178,3 +178,61 @@ def test_analyze_accepts_dll_and_sys_extensions(tmp_path):
         report = json.loads(result.output)
         assert report["status"] == "static_analysis_completed"
         assert report["input"]["filename"] == sample.name
+
+
+def test_report_includes_versioned_evidence_and_unknown_triage(tmp_path):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+
+    result = runner.invoke(app, ["analyze", str(sample)])
+
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+
+    assert report["schema_version"] == "1.0.0"
+    assert report["analysis_status"] == "completed"
+    assert report["file"]["name"] == "fixture.exe"
+    assert report["file"]["format"] == "PE"
+    assert report["evidence"]
+    assert all(item["schema_version"] == "1.0.0" for item in report["evidence"])
+    assert all(item["record_type"] == "observation" for item in report["evidence"])
+
+    evidence_ids = {item["id"] for item in report["evidence"]}
+    for finding in report["findings"]:
+        assert finding["rule_ids"]
+        assert set(finding["evidence_ids"]) <= evidence_ids
+        assert finding["rule_ids"][0] == finding["id"]
+
+    triage = report["triage"]
+    assert triage["score"] <= triage["score_cap"]
+    assert triage["score"] == min(triage["raw_score"], triage["score_cap"])
+    assert triage["findings"] == report["findings"]
+
+    if triage["status"] == "no_rule_match":
+        assert triage["severity"] == "unknown"
+        assert any(
+            "does not mean the file is safe" in warning
+            for warning in triage["warnings"]
+        )
+
+
+def test_cli_report_evidence_ids_are_deterministic(tmp_path):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+
+    first = runner.invoke(app, ["analyze", str(sample)])
+    second = runner.invoke(app, ["analyze", str(sample)])
+
+    assert first.exit_code == 0, first.output
+    assert second.exit_code == 0, second.output
+
+    first_report = json.loads(first.output)
+    second_report = json.loads(second.output)
+
+    assert [item["id"] for item in first_report["evidence"]] == [
+        item["id"] for item in second_report["evidence"]
+    ]
+    assert (
+        first_report["triage"]["score_breakdown"]
+        == second_report["triage"]["score_breakdown"]
+    )

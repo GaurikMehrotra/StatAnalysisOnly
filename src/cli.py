@@ -13,7 +13,10 @@ from src.analyzers.import_analyzer import (
 from src.analyzers.pe_analyzer import PEAnalysisError, analyze_pe
 from src.analyzers.section_analyzer import analyze_sections
 from src.analyzers.string_analyzer import StringAnalysisError, analyze_strings
+from src.detection.capability_mapper import collect_evidence
+from src.detection.evidence import EVIDENCE_SCHEMA_VERSION
 from src.detection.ioc_extractor import IOCExtractionError, extract_iocs
+from src.detection.rule_engine import RuleEngineError, evaluate_rules
 from src.safety import (
     DEFAULT_MAX_FILE_SIZE,
     InputValidationError,
@@ -112,29 +115,66 @@ def analyze(
         typer.echo(f"IOC extraction rejected: {exc}", err=True)
         raise typer.Exit(code=2) from exc
 
+    input_identity = identity_to_dict(identity)
+
+    try:
+        evidence_records = collect_evidence(
+            file_identity=input_identity,
+            pe_metadata=pe_metadata,
+            section_analysis=section_analysis,
+            import_analysis=import_analysis,
+            string_analysis=string_analysis,
+            ioc_analysis=ioc_analysis,
+        )
+        triage = evaluate_rules(evidence_records)
+    except (ValueError, RuleEngineError) as exc:
+        typer.echo(f"Evidence/rule evaluation failed: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
+    evidence = [
+        record.model_dump(mode="json")
+        for record in evidence_records
+    ]
+
+    findings = triage["findings"]
+
+    warnings = [
+        "PE metadata is static evidence, not proof of malicious behavior.",
+        "PE timestamps are untrusted and may be forged.",
+        "Import names are static evidence and do not prove runtime behavior.",
+        (
+            "Extracted strings and IOCs are static indicators, "
+            "not proof of maliciousness."
+        ),
+        "Section entropy is a heuristic, not proof of maliciousness.",
+        "Passing static analysis does not establish that a file is safe.",
+        *triage["warnings"],
+    ]
+
     report = {
+        "schema_version": EVIDENCE_SCHEMA_VERSION,
+        "analysis_status": "completed",
+        "file": {
+            "name": input_identity["filename"],
+            "size_bytes": input_identity["size_bytes"],
+            "sha256": input_identity["sha256"],
+            "format": pe_metadata.get("format", "unknown"),
+        },
+        "evidence": evidence,
+        "findings": findings,
+        "triage": triage,
         "tool": {
             "name": "malware-analysis-agent",
             "version": get_tool_version(),
         },
         "status": "static_analysis_completed",
-        "input": identity_to_dict(identity),
+        "input": input_identity,
         "pe_metadata": pe_metadata,
         "section_analysis": section_analysis,
         "import_analysis": import_analysis,
         "string_analysis": string_analysis,
         "ioc_analysis": ioc_analysis,
-        "warnings": [
-            "PE metadata is static evidence, not proof of malicious behavior.",
-            "PE timestamps are untrusted and may be forged.",
-            "Import names are static evidence and do not prove runtime behavior.",
-            (
-                "Extracted strings and IOCs are static indicators, "
-                "not proof of maliciousness."
-            ),
-            "Section entropy is a heuristic, not proof of maliciousness.",
-            "Passing static analysis does not establish that a file is safe.",
-        ],
+        "warnings": warnings,
     }
 
     rendered = json.dumps(report, indent=2, sort_keys=True)

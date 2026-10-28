@@ -1,0 +1,76 @@
+ruleset_version: "1.0.0"
+
+scoring:
+  maximum_score: 100
+  thresholds:
+    informational: 0
+    low: 20
+    medium: 40
+    high: 70
+    critical: 90
+
+rules:
+  - id: CAP-IMPORT-MEMORY-ALLOCATION
+    version: "1.0.0"
+    title: Memory allocation API imported
+    description: The PE import table contains a memory allocation API.
+    capability: memory_management
+    severity: low
+    weight: 10
+    rationale: >
+      The import suggests that the program may allocate memory.
+      Import presence alone does not establish runtime behavior.
+    conditions:
+      all:
+        - category: import
+          field: api
+          equals: VirtualAlloc
+
+  - id: CAP-IMPORT-MEMORY-PROTECTION
+    version: "1.0.0"
+    title: Memory protection API imported
+    description: The PE import table contains a memory protection API.
+    capability: memory_management
+    severity: low
+    weight: 10
+    rationale: >
+      The import suggests that the program may change memory protection.
+      Import presence alone does not establish runtime behavior.
+    conditions:
+      all:
+        - category: import
+          field: api
+          equals: VirtualProtect
+
+  - id: CAP-IOC-URL
+    version: "1.0.0"
+    title: URL embedded in analyzed strings
+    description: Static string analysis recovered a URL candidate.
+    capability: embedded_network_indicator
+    severity: informational
+    weight: 5
+    rationale: >
+      An embedded URL may be a configuration value, documentation,
+      or an indicator of network-related functionality. It is not
+      contacted during analysis and is not proof of maliciousness.
+    conditions:
+      all:
+        - category: ioc
+          field: type
+          equals: url
+
+  - id: CAP-SECTION-WRITABLE-EXECUTABLE
+    version: "1.0.0"
+    title: Writable and executable section observed
+    description: Section evidence indicates both write and execute permissions.
+    capability: unusual_section_permissions
+    severity: medium
+    weight: 25
+    rationale: >
+      A writable and executable section can be relevant to triage,
+      but legitimate software may also contain unusual section permissions.
+    conditions:
+      all:
+        - category: section
+          field: writable_executable
+          equals: true

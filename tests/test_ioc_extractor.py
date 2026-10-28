@@ -107,3 +107,64 @@ def test_extracts_com_domain():
     domains = [item for item in result["iocs"] if item["type"] == "domain"]
 
     assert any(item["value"] == "example.com" for item in domains)
+
+
+def test_iocs_include_format_validation_and_origin():
+    result = extract_iocs(
+        [make_string("Connect to 192.0.2.10", offset=25)]
+    )
+    item = next(ioc for ioc in result["iocs"] if ioc["type"] == "ipv4")
+
+    assert item["validation_status"] == "valid_format"
+    assert item["origin"] == "string_analysis"
+    assert item["origins"] == [
+        {"source": "string_analysis", "offset": 36, "encoding": "ascii"}
+    ]
+    assert item["normalized_value"] == "192.0.2.10"
+
+
+def test_duplicate_ioc_preserves_all_distinct_origins():
+    result = extract_iocs(
+        [
+            make_string("https://Example.org/a", offset=100),
+            {"value": "https://example.org/a", "offset": 20, "encoding": "utf-16le"},
+            make_string("https://EXAMPLE.ORG/a", offset=100),
+        ]
+    )
+    urls = [ioc for ioc in result["iocs"] if ioc["type"] == "url"]
+
+    assert len(urls) == 1
+    assert urls[0]["offset"] == 20
+    assert urls[0]["source_encoding"] == "utf-16le"
+    assert len(urls[0]["origins"]) == 2
+    assert urls[0]["origins"][0]["offset"] == 20
+    assert urls[0]["origins"][1]["offset"] == 100
+
+
+def test_malformed_url_candidate_is_marked_invalid():
+    result = extract_iocs([make_string("https://:bad-port/path")])
+    urls = [ioc for ioc in result["iocs"] if ioc["type"] == "url"]
+
+    assert urls
+    assert all(ioc["validation_status"] == "invalid_format" for ioc in urls)
+
+
+def test_valid_url_is_only_marked_as_syntactically_valid():
+    result = extract_iocs([make_string("https://example.org/path")])
+    url = next(ioc for ioc in result["iocs"] if ioc["type"] == "url")
+
+    assert url["validation_status"] == "valid_format"
+    assert any("syntax only" in warning for warning in result["warnings"])
+
+
+def test_repeated_occurrence_in_same_location_is_not_duplicated():
+    result = extract_iocs(
+        [
+            make_string("https://example.org https://example.org", offset=10),
+        ]
+    )
+    urls = [ioc for ioc in result["iocs"] if ioc["type"] == "url"]
+
+    assert len(urls) == 1
+    assert len(urls[0]["origins"]) == 2
+    assert [origin["offset"] for origin in urls[0]["origins"]] == [10, 30]
