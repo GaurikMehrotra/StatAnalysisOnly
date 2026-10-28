@@ -20,7 +20,8 @@
     "import_analysis",
     "string_analysis",
     "ioc_analysis",
-    "warnings"
+    "warnings",
+    "attack_candidates"
   ],
   "properties": {
     "schema_version": {
@@ -390,6 +391,12 @@
       "items": {
         "type": "string"
       }
+    },
+    "attack_candidates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attack_candidate"
+      }
     }
   },
   "$defs": {
@@ -454,6 +461,64 @@
         "record_type": {
           "type": "string",
           "const": "interpretation"
+        }
+      }
+    },
+    "attack_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "technique_id",
+        "technique_name",
+        "finding_ids",
+        "evidence_ids",
+        "rationale",
+        "confidence",
+        "status",
+        "disclaimer"
+      ],
+      "properties": {
+        "technique_id": {
+          "type": "string",
+          "pattern": "^T[0-9]{4}(?:\\.[0-9]{3})?$"
+        },
+        "technique_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "finding_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^ev_[a-f0-9]{16}$"
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "status": {
+          "const": "candidate"
+        },
+        "disclaimer": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

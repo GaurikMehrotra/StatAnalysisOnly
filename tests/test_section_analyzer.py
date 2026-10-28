@@ -8,7 +8,10 @@ from src.analyzers.pe_analyzer import PEAnalysisError
 from src.analyzers.section_analyzer import analyze_sections
 
 
-def make_pe_with_one_section(section_data=b"AB" * 256):
+def make_pe_with_one_section(
+    section_data=b"AB" * 256,
+    characteristics=0x60000020,
+):
     """Build a synthetic PE32 file with one section; never execute it."""
     dos = bytearray(0x80)
     dos[0:2] = b"MZ"
@@ -55,7 +58,7 @@ def make_pe_with_one_section(section_data=b"AB" * 256):
         0,
         0,
         0,
-        0x60000020,
+        characteristics,
     )
 
     headers[0x80 + 4 + 20 + 224 : 0x80 + 4 + 20 + 224 + 40] = section_header
@@ -80,6 +83,18 @@ def test_extracts_section_metadata(tmp_path):
     assert section["writable"] is False
     assert section["executable"] is True
     assert section["entropy"] == pytest.approx(1.0)
+
+
+def test_reports_writable_executable_section_flags(tmp_path):
+    sample = tmp_path / "writable-executable.exe"
+    sample.write_bytes(make_pe_with_one_section(characteristics=0xE0000020))
+
+    result = analyze_sections(sample)
+    section = result["sections"][0]
+
+    assert section["readable"] is True
+    assert section["writable"] is True
+    assert section["executable"] is True
 
 
 def test_rejects_non_pe_input(tmp_path):

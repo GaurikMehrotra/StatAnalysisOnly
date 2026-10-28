@@ -1,0 +1,526 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/malware-analysis-report-v1.schema.json",
+  "title": "Malware Analysis Report",
+  "description": "Version 1 report for local static analysis of Windows PE files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "analysis_status",
+    "file",
+    "evidence",
+    "findings",
+    "triage",
+    "tool",
+    "status",
+    "input",
+    "pe_metadata",
+    "section_analysis",
+    "import_analysis",
+    "string_analysis",
+    "ioc_analysis",
+    "warnings",
+    "attack_candidates"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "analysis_status": {
+      "enum": [
+        "completed",
+        "partial",
+        "rejected",
+        "failed"
+      ]
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "size_bytes",
+        "sha256",
+        "format"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{64}$"
+            }
+          ]
+        },
+        "format": {
+          "enum": [
+            "PE",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "id",
+          "category",
+          "description",
+          "source",
+          "value",
+          "location",
+          "confidence",
+          "severity",
+          "rationale",
+          "caveats",
+          "record_type"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "1.0.0"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^ev_[a-f0-9]{16}$"
+          },
+          "category": {
+            "enum": [
+              "file_metadata",
+              "pe_metadata",
+              "import",
+              "export",
+              "section",
+              "string",
+              "entropy",
+              "ioc",
+              "parser_warning"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {},
+          "location": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            ]
+          },
+          "severity": {
+            "enum": [
+              "informational",
+              "low",
+              "medium",
+              "high",
+              "critical",
+              "unknown"
+            ]
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "caveats": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "record_type": {
+            "enum": [
+              "observation",
+              "interpretation"
+            ]
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "rule_version",
+          "title",
+          "capability",
+          "severity",
+          "weight",
+          "rule_ids",
+          "evidence_ids",
+          "rationale",
+          "record_type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capability": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "enum": [
+              "informational",
+              "low",
+              "medium",
+              "high",
+              "critical",
+              "unknown"
+            ]
+          },
+          "weight": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rule_ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "evidence_ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^ev_[a-f0-9]{16}$"
+            }
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "record_type": {
+            "type": "string",
+            "const": "interpretation"
+          }
+        }
+      }
+    },
+    "triage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ruleset_version",
+        "status",
+        "score",
+        "raw_score",
+        "score_cap",
+        "severity",
+        "matched_rule_ids",
+        "findings",
+        "score_breakdown",
+        "warnings"
+      ],
+      "properties": {
+        "ruleset_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "insufficient_evidence",
+            "no_rule_match",
+            "rules_matched"
+          ]
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "raw_score": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "score_cap": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "severity": {
+          "enum": [
+            "informational",
+            "low",
+            "medium",
+            "high",
+            "critical",
+            "unknown"
+          ]
+        },
+        "matched_rule_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "score_breakdown": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rule_id",
+              "weight",
+              "evidence_ids"
+            ],
+            "properties": {
+              "rule_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "weight": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "evidence_ids": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^ev_[a-f0-9]{16}$"
+                }
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "status": {
+      "const": "static_analysis_completed"
+    },
+    "input": {
+      "type": "object"
+    },
+    "pe_metadata": {
+      "type": "object"
+    },
+    "section_analysis": {
+      "type": "object"
+    },
+    "import_analysis": {
+      "type": "object"
+    },
+    "string_analysis": {
+      "type": "object"
+    },
+    "ioc_analysis": {
+      "type": "object"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "attack_candidates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attack_candidate"
+      }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "rule_version",
+        "title",
+        "capability",
+        "severity",
+        "weight",
+        "rule_ids",
+        "evidence_ids",
+        "rationale",
+        "record_type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "rule_version": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "capability": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "informational",
+            "low",
+            "medium",
+            "high",
+            "critical",
+            "unknown"
+          ]
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rule_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev_[a-f0-9]{16}$"
+          }
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "record_type": {
+          "type": "string",
+          "const": "interpretation"
+        }
+      }
+    },
+    "attack_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "technique_id",
+        "technique_name",
+        "finding_ids",
+        "evidence_ids",
+        "rationale",
+        "confidence",
+        "status",
+        "disclaimer"
+      ],
+      "properties": {
+        "technique_id": {
+          "type": "string",
+          "pattern": "^T[0-9]{4}(?:\\.[0-9]{3})?$"
+        },
+        "technique_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "finding_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^ev_[a-f0-9]{16}$"
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "status": {
+          "const": "candidate"
+        },
+        "disclaimer": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

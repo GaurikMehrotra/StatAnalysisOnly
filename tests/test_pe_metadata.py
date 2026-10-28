@@ -69,6 +69,24 @@ def test_rejects_malformed_pe(tmp_path, content):
         analyze_pe(sample)
 
 
+@pytest.mark.parametrize(
+    "truncate_at",
+    [
+        0x40,                 # Truncated DOS header
+        0x82,                 # Truncated PE signature
+        0x80 + 4 + 10,        # Truncated COFF header
+        0x80 + 4 + 20 + 20,   # Truncated optional header
+        0x80 + 4 + 20 + 223,  # Optional header short by one byte
+    ],
+)
+def test_rejects_truncated_pe_structures(tmp_path, truncate_at):
+    sample = tmp_path / "truncated.exe"
+    sample.write_bytes(make_minimal_pe()[:truncate_at])
+
+    with pytest.raises(PEAnalysisError):
+        analyze_pe(sample)
+
+
 def test_rejects_oversized_input(tmp_path):
     sample = tmp_path / "large.exe"
     sample.write_bytes(b"MZ" + b"\0" * 100)

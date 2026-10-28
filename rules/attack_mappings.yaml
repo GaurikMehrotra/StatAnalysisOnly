@@ -1,0 +1,6 @@
+schema_version: "1.0.0"
+description: >
+  Conservative ATT&CK candidate mappings. Only explicitly supported,
+  rule-backed capabilities may produce candidates. Generic API imports,
+  URLs, and section permissions are not sufficient by themselves.
+mappings: []

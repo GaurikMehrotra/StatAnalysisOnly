@@ -93,6 +93,31 @@ def analyze_pe(
     if not data.startswith(b"MZ"):
         raise PEAnalysisError("Invalid DOS signature: expected MZ")
 
+    if len(data) < 0x40:
+        raise PEAnalysisError("Truncated DOS header")
+
+    pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
+
+    if pe_offset + 4 > len(data):
+        raise PEAnalysisError("Truncated PE signature")
+
+    if data[pe_offset : pe_offset + 4] != b"PE\x00\x00":
+        raise PEAnalysisError("Invalid PE signature")
+
+    coff_offset = pe_offset + 4
+    coff_header_size = 20
+
+    if coff_offset + coff_header_size > len(data):
+        raise PEAnalysisError("Truncated COFF header")
+
+    optional_header_size = struct.unpack_from(
+        "<H", data, coff_offset + 16
+    )[0]
+    optional_header_offset = coff_offset + coff_header_size
+
+    if optional_header_offset + optional_header_size > len(data):
+        raise PEAnalysisError("Truncated optional header")
+
     try:
         pe = pefile.PE(data=data, fast_load=False)
     except (pefile.PEFormatError, ValueError, IndexError, struct.error) as exc:

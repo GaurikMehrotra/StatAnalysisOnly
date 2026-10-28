@@ -57,6 +57,7 @@ def test_analyze_outputs_pe_metadata(tmp_path):
 
     assert result.exit_code == 0, result.output
     report = json.loads(result.output)
+    assert report["attack_candidates"] == []
     assert report["tool"]["name"] == "malware-analysis-agent"
     assert isinstance(report["tool"]["version"], str)
     assert report["tool"]["version"]
@@ -236,3 +237,79 @@ def test_cli_report_evidence_ids_are_deterministic(tmp_path):
         first_report["triage"]["score_breakdown"]
         == second_report["triage"]["score_breakdown"]
     )
+
+
+def test_analyze_outputs_markdown_report(tmp_path):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+
+    result = runner.invoke(app, ["analyze", str(sample), "--format", "markdown"])
+
+    assert result.exit_code == 0, result.output
+    assert result.output.startswith("# Malware Analysis Report")
+    assert "fixture.exe" in result.output
+    assert "Warnings and limitations" in result.output
+    assert not result.output.lstrip().startswith("{")
+
+
+def test_analyze_writes_markdown_report(tmp_path):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+    output = tmp_path / "report.md"
+
+    result = runner.invoke(
+        app,
+        ["analyze", str(sample), "--format", "markdown", "--output", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "MARKDOWN report written to:" in result.output
+    markdown = output.read_text(encoding="utf-8")
+    assert markdown.startswith("# Malware Analysis Report")
+    assert "fixture.exe" in markdown
+
+
+def test_validate_report_accepts_cli_generated_json(tmp_path):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+    output = tmp_path / "report.json"
+
+    analyze_result = runner.invoke(
+        app, ["analyze", str(sample), "--output", str(output)]
+    )
+    assert analyze_result.exit_code == 0, analyze_result.output
+
+    result = runner.invoke(app, ["validate-report", str(output)])
+
+    assert result.exit_code == 0, result.output
+    assert "Report is valid:" in result.output
+
+
+def test_validate_report_rejects_invalid_json(tmp_path):
+    report_path = tmp_path / "invalid.json"
+    report_path.write_text("{not valid JSON", encoding="utf-8")
+
+    result = runner.invoke(app, ["validate-report", str(report_path)])
+
+    assert result.exit_code == 2
+    assert "Cannot read JSON report" in result.output
+
+
+def test_validate_report_rejects_schema_invalid_json(tmp_path):
+    report_path = tmp_path / "invalid.json"
+    report_path.write_text('{"schema_version": "1.0.0"}', encoding="utf-8")
+
+    result = runner.invoke(app, ["validate-report", str(report_path)])
+
+    assert result.exit_code == 2
+    assert "Report validation failed" in result.output
+
+
+def test_analyze_rejects_unsupported_report_format(tmp_path):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+
+    result = runner.invoke(app, ["analyze", str(sample), "--format", "xml"])
+
+    assert result.exit_code == 2
+    assert "Unsupported format" in result.output
