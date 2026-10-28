@@ -74,9 +74,7 @@ def analyze_imports_exports(
     try:
         pe = pefile.PE(data=data, fast_load=False)
     except (pefile.PEFormatError, ValueError, IndexError, struct.error) as exc:
-        raise ImportAnalysisError(
-            f"Invalid or malformed PE file: {exc}"
-        ) from exc
+        raise ImportAnalysisError(f"Invalid or malformed PE file: {exc}") from exc
 
     try:
         if pe.NT_HEADERS.Signature != 0x00004550:
@@ -94,9 +92,7 @@ def analyze_imports_exports(
                     {
                         "name": _decode_name(symbol.name),
                         "ordinal": (
-                            int(symbol.ordinal)
-                            if symbol.ordinal is not None
-                            else None
+                            int(symbol.ordinal) if symbol.ordinal is not None else None
                         ),
                     }
                 )
@@ -128,9 +124,7 @@ def analyze_imports_exports(
             exports = exports[:MAX_REPORTED_SYMBOLS]
             warnings.append("Export symbol count was truncated at the safety limit.")
 
-        imported_function_count = sum(
-            len(library["functions"]) for library in imports
-        )
+        imported_function_count = sum(len(library["functions"]) for library in imports)
 
         return {
             "import_library_count": len(imports),

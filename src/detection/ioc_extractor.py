@@ -20,9 +20,26 @@ _EMAIL_RE = re.compile(
 
 # Avoid treating common executable and document extensions as domain TLDs.
 _NON_DOMAIN_SUFFIXES = {
-    "bin", "cfg", "dll", "doc", "exe", "gif", "ini",
-    "jpg", "json", "log", "pdf", "png", "ps1", "py", "sys",
-    "tmp", "txt", "xml", "yaml", "yml",
+    "bin",
+    "cfg",
+    "dll",
+    "doc",
+    "exe",
+    "gif",
+    "ini",
+    "jpg",
+    "json",
+    "log",
+    "pdf",
+    "png",
+    "ps1",
+    "py",
+    "sys",
+    "tmp",
+    "txt",
+    "xml",
+    "yaml",
+    "yml",
 }
 
 
@@ -41,11 +58,7 @@ def extract_iocs(
     a string ``encoding``, and a string ``value``.
     Offsets in results refer to byte positions in the original file.
     """
-    if (
-        isinstance(max_iocs, bool)
-        or not isinstance(max_iocs, int)
-        or max_iocs < 1
-    ):
+    if isinstance(max_iocs, bool) or not isinstance(max_iocs, int) or max_iocs < 1:
         raise IOCExtractionError("max_iocs must be a positive integer")
     if not isinstance(strings, list):
         raise IOCExtractionError("strings must be a list")
@@ -61,11 +74,7 @@ def extract_iocs(
         encoding = entry.get("encoding")
         value = entry.get("value")
 
-        if (
-            isinstance(offset, bool)
-            or not isinstance(offset, int)
-            or offset < 0
-        ):
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
             raise IOCExtractionError("String offset must be a non-negative integer")
         if not isinstance(encoding, str) or not isinstance(value, str):
             raise IOCExtractionError(

@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MiB
+SUPPORTED_INPUT_EXTENSIONS = {".exe", ".dll", ".sys"}
 HASH_CHUNK_SIZE = 1024 * 1024  # 1 MiB
 
 
@@ -38,13 +39,9 @@ def inspect_input(
     try:
         file_stat = path.lstat()
     except FileNotFoundError as exc:
-        raise InputValidationError(
-            f"Input file does not exist: {path}"
-        ) from exc
+        raise InputValidationError(f"Input file does not exist: {path}") from exc
     except OSError as exc:
-        raise InputValidationError(
-            f"Cannot inspect input path: {exc}"
-        ) from exc
+        raise InputValidationError(f"Cannot inspect input path: {exc}") from exc
 
     if stat.S_ISLNK(file_stat.st_mode):
         raise InputValidationError("Symbolic links are not accepted")
@@ -52,9 +49,9 @@ def inspect_input(
     if not stat.S_ISREG(file_stat.st_mode):
         raise InputValidationError("Input must be a regular file")
 
-    if path.suffix.lower() != ".exe":
+    if path.suffix.lower() not in SUPPORTED_INPUT_EXTENSIONS:
         raise InputValidationError(
-            "Unsupported input type: expected a .exe file"
+            "Unsupported input type: expected .exe, .dll, or .sys"
         )
 
     if file_stat.st_size == 0:
@@ -86,16 +83,12 @@ def inspect_input(
             or final_stat.st_size != file_stat.st_size
             or final_stat.st_mtime_ns != file_stat.st_mtime_ns
         ):
-            raise InputValidationError(
-                "Input changed during inspection"
-            )
+            raise InputValidationError("Input changed during inspection")
 
     except InputValidationError:
         raise
     except OSError as exc:
-        raise InputValidationError(
-            f"Cannot read input file: {exc}"
-        ) from exc
+        raise InputValidationError(f"Cannot read input file: {exc}") from exc
 
     return InputIdentity(
         path=str(path.resolve()),

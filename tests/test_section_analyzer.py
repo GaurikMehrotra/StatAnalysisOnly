@@ -58,9 +58,7 @@ def make_pe_with_one_section(section_data=b"AB" * 256):
         0x60000020,
     )
 
-    headers[0x80 + 4 + 20 + 224 : 0x80 + 4 + 20 + 224 + 40] = (
-        section_header
-    )
+    headers[0x80 + 4 + 20 + 224 : 0x80 + 4 + 20 + 224 + 40] = section_header
 
     return bytes(headers) + padded_data
 

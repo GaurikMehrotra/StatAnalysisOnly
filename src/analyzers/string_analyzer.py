@@ -38,9 +38,7 @@ def analyze_strings(
     try:
         before = path.lstat()
     except OSError as exc:
-        raise StringAnalysisError(
-            f"Cannot access input file: {exc}"
-        ) from exc
+        raise StringAnalysisError(f"Cannot access input file: {exc}") from exc
 
     if stat.S_ISLNK(before.st_mode):
         raise StringAnalysisError("Symbolic links are not accepted")
@@ -82,7 +80,7 @@ def analyze_strings(
     pe_offset = int.from_bytes(data[0x3C:0x40], "little")
     if pe_offset < 0x40 or pe_offset + 4 > len(data):
         raise StringAnalysisError("Invalid or truncated PE header offset")
-    if data[pe_offset:pe_offset + 4] != b"PE\x00\x00":
+    if data[pe_offset : pe_offset + 4] != b"PE\x00\x00":
         raise StringAnalysisError("Invalid PE signature")
 
     # Collect one extra result to determine whether the output was truncated.
@@ -122,9 +120,7 @@ def analyze_strings(
 
     warnings = []
     if truncated:
-        warnings.append(
-            f"String output was limited to {max_strings} results."
-        )
+        warnings.append(f"String output was limited to {max_strings} results.")
 
     return {
         "string_count": len(results),

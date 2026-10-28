@@ -1,107 +1,99 @@
-# AI-Powered Malware Analysis and Behavioral Threat Intelligence Platform
+# Static PE Malware Analysis Agent
 
-A local-first, defensive malware analysis project focused on static analysis,
-evidence-backed findings, and explainable threat intelligence.
+A local-first, defensive command-line tool for static inspection of Windows
+Portable Executable (PE) files. It extracts structural metadata, imports and
+exports, printable strings, and potential indicators of compromise (IOCs).
 
-## Purpose
+## Current status
 
-Inspect supported Windows Portable Executable (PE) files without executing
-them. Extract file metadata and structural indicators, preserve evidence,
-and produce reproducible analysis reports.
+The static-analysis CLI is implemented and covered by synthetic-fixture tests.
+It is an early-stage analysis tool, not a complete malware detection product.
 
-## Scope
+## Implemented features
 
-The initial release focuses on:
-- Windows PE files: EXE, DLL, and SYS.
-- Static inspection of file metadata and executable structure.
-- Evidence-backed findings with source, rationale, and confidence.
-- Versioned JSON reports and later-generated Markdown reports.
-- Local processing by default.
+- Input validation for `.exe`, `.dll`, and `.sys` files.
+- Maximum input size of 100 MiB by default.
+- File identity: filename, size, and SHA-256 hash.
+- PE metadata, including architecture, entry point, image base, subsystem,
+  and characteristics where available.
+- PE section metadata and section entropy.
+- Imported libraries, imported function names, and exported symbols.
+- Bounded printable ASCII and UTF-16LE string extraction.
+- Potential URL, domain, email, and IPv4 indicators extracted from strings.
+- Structured JSON output to standard output or a new output file.
+- Warnings explaining limitations of static indicators.
 
-## Non-goals
+## Usage
 
-The initial release will not:
-- Execute submitted samples.
-- Detonate files or run a sandbox.
-- Automatically upload samples or reports to external services.
-- Claim that a file is malicious based on one indicator alone.
-- Treat an AI-generated explanation as authoritative evidence.
-- Guarantee detection of every malware family.
+Print a JSON report for an existing PE file:
 
-## Supported input
+    python -m src.cli analyze ./sample.exe
 
-- A local Windows PE file with an EXE, DLL, or SYS extension.
-- Initial maximum input size: 100 MiB (104857600 bytes).
-- File content must be validated; the extension alone does not establish
-  that a file is a valid PE executable.
+Write a JSON report to a new file:
 
-Unsupported formats and files exceeding the size limit must be rejected
-with a clear error. Limits are a safety policy, not a guarantee that a file
-is safe to parse.
+    python -m src.cli analyze ./sample.exe --output ./report.json
 
-## Outputs
+The input must exist and be a supported PE file. The output file must not
+already exist; existing files are not overwritten.
 
-- A versioned JSON report containing file metadata, evidence, findings,
-  warnings, and analysis status.
-- Markdown reports may be generated from the same report object in a
-  later implementation phase.
+Inspect available commands and options:
 
-Reports may contain sensitive paths, strings, hashes, and indicators.
-Store and share them carefully.
+    python -m src.cli --help
+    python -m src.cli analyze --help
 
-## Safety contract
+## Safety and limitations
 
 - Submitted samples are never executed by this application.
-- Analysis is static and local by default.
-- No sample or report is uploaded automatically.
-- Input paths must be validated before reading.
-- File size and parsing failures must be handled explicitly.
-- Strings and metadata extracted from a sample are untrusted data.
-  They must never be interpreted as instructions or executed as commands.
-- Test suites use harmless synthetic fixtures, not live malware.
-- Users should analyze only files they are authorized to inspect.
+- The application performs static inspection only.
+- Samples and reports are not automatically uploaded by the analysis pipeline.
+- File extensions alone do not establish that a file is a valid PE.
+- Extracted strings, metadata, and IOCs are untrusted data.
+- A detected indicator is not proof of maliciousness, and missing indicators
+  do not prove that a file is benign.
+- Static parsing of malformed files still carries risk. Keep dependencies
+  updated and use an appropriately isolated environment for untrusted samples.
+- Reports may contain sensitive paths, hashes, strings, and indicators.
+- Analyze only files you are authorized to inspect.
 
-Static parsing still carries risk when handling malformed files. Keep
-dependencies updated and use an appropriately isolated environment for
-untrusted samples when practical.
+The test suite uses synthetic PE fixtures, not live malware.
+
+## Not yet implemented
+
+The following are outside the current pipeline's implemented capabilities:
+
+- Dynamic execution, sandboxing, or behavioral monitoring.
+- A complete malware verdict or comprehensive malware-family detection.
+- A finished rule engine and capability-mapping pipeline.
+- Schema-validated, versioned evidence/findings reports.
+- Markdown report generation and AI-generated explanations.
+- Automatic uploading of samples or reports to external services.
 
 ## Development setup
 
-Prerequisites:
-- Ubuntu under WSL or another supported Linux environment.
-- Python 3.14.4 for the current development environment, subject to
-  compatibility verification.
-- Git and a C compiler toolchain for packages that need native compilation.
+The current development environment uses Ubuntu under WSL and Python 3.14.
+Other Python versions may require compatibility testing.
 
-Create and activate a virtual environment:
+Create a virtual environment and install development dependencies:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements-dev.txt
-```
+    python3 -m venv .venv
+    source .venv/bin/activate
+    python -m pip install --upgrade pip
+    python -m pip install -r requirements-dev.txt
 
-Run tests:
+Run tests and quality checks:
 
-```bash
-python -m pytest
-```
+    python -m pytest -q
+    python -m ruff check src tests
+    python -m ruff format --check src tests
+    python -m pip check
 
-Check code style:
+## Phase 1 acceptance scope
 
-```bash
-ruff check .
-ruff format --check .
-```
-
-## Project status
-
-Phase 0 is establishing requirements, safety boundaries, report contracts,
-and tests. Analyzer implementation will begin only after these contracts
-and acceptance tests have been reviewed.
+Phase 1 focuses on safe input handling, file hashes, PE metadata, analyzer
+results, warnings, tool version, and JSON CLI output. Rule-backed findings
+and the canonical report schema are later milestones.
 
 ## License
 
-No license has been selected yet. Do not assume this project is licensed
-for redistribution until a license is added.
+No license has been selected yet. Do not assume the project is licensed for
+redistribution until a license is added.

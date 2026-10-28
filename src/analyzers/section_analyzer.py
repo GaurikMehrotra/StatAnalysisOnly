@@ -87,18 +87,13 @@ def analyze_sections(
             raw_size = int(section.SizeOfRawData)
 
             if raw_size and (
-                raw_offset > len(data)
-                or raw_size > len(data) - raw_offset
+                raw_offset > len(data) or raw_size > len(data) - raw_offset
             ):
                 raise PEAnalysisError(
                     f"Section {name!r} raw data extends beyond the input file"
                 )
 
-            raw_data = (
-                data[raw_offset : raw_offset + raw_size]
-                if raw_size
-                else b""
-            )
+            raw_data = data[raw_offset : raw_offset + raw_size] if raw_size else b""
             sections.append(
                 {
                     "name": name,
@@ -120,8 +115,6 @@ def analyze_sections(
             "sections": sections,
         }
     except (AttributeError, IndexError, ValueError, struct.error) as exc:
-        raise PEAnalysisError(
-            f"Cannot extract PE section metadata: {exc}"
-        ) from exc
+        raise PEAnalysisError(f"Cannot extract PE section metadata: {exc}") from exc
     finally:
         pe.close()

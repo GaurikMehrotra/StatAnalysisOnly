@@ -110,16 +110,12 @@ def analyze_pe(
 
         characteristics = int(file_header.Characteristics)
         flags = [
-            name
-            for bit, name in CHARACTERISTIC_FLAGS.items()
-            if characteristics & bit
+            name for bit, name in CHARACTERISTIC_FLAGS.items() if characteristics & bit
         ]
 
         return {
             "format": "PE",
-            "architecture": MACHINE_NAMES.get(
-                int(file_header.Machine), "UNKNOWN"
-            ),
+            "architecture": MACHINE_NAMES.get(int(file_header.Machine), "UNKNOWN"),
             "machine": int(file_header.Machine),
             "number_of_sections": int(file_header.NumberOfSections),
             "timestamp": int(file_header.TimeDateStamp),
@@ -129,18 +125,13 @@ def analyze_pe(
             "optional_header_magic": int(optional.Magic),
             "entry_point": int(optional.AddressOfEntryPoint),
             "image_base": int(optional.ImageBase),
-            "subsystem": SUBSYSTEM_NAMES.get(
-                int(optional.Subsystem), "UNKNOWN"
-            ),
+            "subsystem": SUBSYSTEM_NAMES.get(int(optional.Subsystem), "UNKNOWN"),
             "characteristics": characteristics,
             "characteristic_flags": flags,
             "size_of_image": int(optional.SizeOfImage),
             "size_of_headers": int(optional.SizeOfHeaders),
         }
     except AttributeError as exc:
-        raise PEAnalysisError(
-            f"Required PE metadata is unavailable: {exc}"
-        ) from exc
+        raise PEAnalysisError(f"Required PE metadata is unavailable: {exc}") from exc
     finally:
         pe.close()
-

@@ -13,6 +13,5 @@ def calculate_entropy(data: bytes) -> float:
     frequencies = Counter(data)
 
     return -sum(
-        (count / length) * math.log2(count / length)
-        for count in frequencies.values()
+        (count / length) * math.log2(count / length) for count in frequencies.values()
     )

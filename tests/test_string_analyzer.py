@@ -24,10 +24,7 @@ def test_extracts_ascii_strings_with_offsets(tmp_path):
 
     result = analyze_strings(sample)
 
-    matches = [
-        item for item in result["strings"]
-        if item["value"] == "HelloWorld"
-    ]
+    matches = [item for item in result["strings"] if item["value"] == "HelloWorld"]
     assert len(matches) == 1
     assert matches[0]["encoding"] == "ascii"
     assert matches[0]["offset"] == data.index(b"HelloWorld")

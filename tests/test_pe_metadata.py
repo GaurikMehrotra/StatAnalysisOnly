@@ -13,25 +13,25 @@ def make_minimal_pe():
 
     coff = struct.pack(
         "<HHIIIHH",
-        0x014C,       # x86
-        0,            # sections
-        0x12345678,   # intentionally untrusted timestamp
+        0x014C,  # x86
+        0,  # sections
+        0x12345678,  # intentionally untrusted timestamp
         0,
         0,
-        224,          # PE32 optional header size
-        0x0102,       # executable image and 32-bit machine
+        224,  # PE32 optional header size
+        0x0102,  # executable image and 32-bit machine
     )
 
     optional = bytearray(224)
-    struct.pack_into("<H", optional, 0, 0x010B)       # PE32
-    struct.pack_into("<I", optional, 16, 0x1000)      # entry point
-    struct.pack_into("<I", optional, 28, 0x400000)    # image base
-    struct.pack_into("<I", optional, 32, 0x1000)      # section alignment
-    struct.pack_into("<I", optional, 36, 0x200)       # file alignment
-    struct.pack_into("<I", optional, 56, 0x1000)      # image size
-    struct.pack_into("<I", optional, 60, 0x200)       # headers size
-    struct.pack_into("<H", optional, 68, 3)           # console subsystem
-    struct.pack_into("<I", optional, 92, 16)          # data directories
+    struct.pack_into("<H", optional, 0, 0x010B)  # PE32
+    struct.pack_into("<I", optional, 16, 0x1000)  # entry point
+    struct.pack_into("<I", optional, 28, 0x400000)  # image base
+    struct.pack_into("<I", optional, 32, 0x1000)  # section alignment
+    struct.pack_into("<I", optional, 36, 0x200)  # file alignment
+    struct.pack_into("<I", optional, 56, 0x1000)  # image size
+    struct.pack_into("<I", optional, 60, 0x200)  # headers size
+    struct.pack_into("<H", optional, 68, 3)  # console subsystem
+    struct.pack_into("<I", optional, 92, 16)  # data directories
 
     return bytes(dos) + b"PE\0\0" + coff + bytes(optional)
 

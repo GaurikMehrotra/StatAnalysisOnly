@@ -45,7 +45,7 @@ def get_tool_version() -> str:
 def analyze(
     file_path: Path = typer.Argument(
         ...,
-        help="Path to the Windows executable to inspect.",
+        help="Path to the Windows PE file to inspect.",
     ),
     output: Path | None = typer.Option(
         None,

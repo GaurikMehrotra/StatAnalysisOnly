@@ -83,6 +83,7 @@ def test_empty_input_returns_empty_results():
     assert result["iocs"] == []
     assert result["truncated"] is False
 
+
 def test_url_trailing_punctuation_is_not_included():
     result = extract_iocs([make_string("See https://example.org/path.")])
     url = next(item for item in result["iocs"] if item["type"] == "url")
@@ -103,9 +104,6 @@ def test_url_and_embedded_domain_are_reported_as_distinct_types():
 
 def test_extracts_com_domain():
     result = extract_iocs([make_string("Connect to example.com")])
-    domains = [
-        item for item in result["iocs"]
-        if item["type"] == "domain"
-    ]
+    domains = [item for item in result["iocs"] if item["type"] == "domain"]
 
     assert any(item["value"] == "example.com" for item in domains)

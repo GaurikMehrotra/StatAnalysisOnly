@@ -57,6 +57,9 @@ def test_analyze_outputs_pe_metadata(tmp_path):
 
     assert result.exit_code == 0, result.output
     report = json.loads(result.output)
+    assert report["tool"]["name"] == "malware-analysis-agent"
+    assert isinstance(report["tool"]["version"], str)
+    assert report["tool"]["version"]
     assert report["status"] == "static_analysis_completed"
     assert report["input"]["filename"] == "fixture.exe"
     assert report["input"]["size_bytes"] == len(content)
@@ -84,13 +87,11 @@ def test_analyze_outputs_pe_metadata(tmp_path):
     iocs = report["ioc_analysis"]
     assert iocs["ioc_count"] > 0
     assert any(
-        item["type"] == "url"
-        and item["value"] == "https://updates.example.org/check"
+        item["type"] == "url" and item["value"] == "https://updates.example.org/check"
         for item in iocs["iocs"]
     )
     assert any(
-        item["type"] == "domain"
-        and item["value"] == "updates.example.org"
+        item["type"] == "domain" and item["value"] == "updates.example.org"
         for item in iocs["iocs"]
     )
     assert any(
@@ -103,22 +104,19 @@ def test_analyze_outputs_pe_metadata(tmp_path):
     )
     assert iocs["truncated"] is False
 
-    assert any("Import names are static evidence" in warning
-               for warning in report["warnings"])
+    assert any(
+        "Import names are static evidence" in warning for warning in report["warnings"]
+    )
     assert any(
         "Extracted strings and IOCs are static indicators" in warning
         for warning in report["warnings"]
     )
-    assert not any(
-        "not yet integrated" in warning for warning in report["warnings"]
-    )
+    assert not any("not yet integrated" in warning for warning in report["warnings"])
     assert report["warnings"]
 
 
 def test_analyze_rejects_missing_file(tmp_path):
-    result = runner.invoke(
-        app, ["analyze", str(tmp_path / "missing.exe")]
-    )
+    result = runner.invoke(app, ["analyze", str(tmp_path / "missing.exe")])
 
     assert result.exit_code == 2
     assert "does not exist" in result.output
@@ -167,3 +165,16 @@ def test_analyze_writes_json_report(tmp_path):
     assert "import_analysis" in report
     assert "string_analysis" in report
     assert "ioc_analysis" in report
+
+
+def test_analyze_accepts_dll_and_sys_extensions(tmp_path):
+    for extension in (".dll", ".sys"):
+        sample = tmp_path / f"fixture{extension}"
+        sample.write_bytes(make_minimal_pe())
+
+        result = runner.invoke(app, ["analyze", str(sample)])
+
+        assert result.exit_code == 0, result.output
+        report = json.loads(result.output)
+        assert report["status"] == "static_analysis_completed"
+        assert report["input"]["filename"] == sample.name
