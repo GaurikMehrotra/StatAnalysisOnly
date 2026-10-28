@@ -19,6 +19,9 @@ dependencies = [
     "yara-python",
 ]
 
+[project.scripts]
+malware-agent = "src.cli:app"
+
 [project.optional-dependencies]
 dev = [
     "pytest",
