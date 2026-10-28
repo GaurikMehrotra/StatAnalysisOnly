@@ -135,7 +135,7 @@ precision, recall, or a meaningful real-world false-positive rate.
 ## Development setup
 
 The current development environment uses Ubuntu under WSL and Python 3.14.
-Other Python versions may require compatibility testing.
+CI currently tests Python 3.11 and 3.14.
 
 Create a virtual environment and install development dependencies:
 

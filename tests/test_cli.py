@@ -305,6 +305,30 @@ def test_validate_report_rejects_schema_invalid_json(tmp_path):
     assert "Report validation failed" in result.output
 
 
+def test_validate_report_rejects_invalid_utf8(tmp_path):
+    report_path = tmp_path / "invalid-encoding.json"
+    report_path.write_bytes(b"\xff\xfe\xfa")
+
+    result = runner.invoke(app, ["validate-report", str(report_path)])
+
+    assert result.exit_code == 2
+    assert "Cannot read JSON report" in result.output
+    assert "Traceback" not in result.output
+
+
+def test_validate_report_rejects_oversized_file(tmp_path, monkeypatch):
+    import src.cli as cli_module
+
+    monkeypatch.setattr(cli_module, "MAX_REPORT_SIZE_BYTES", 16)
+    report_path = tmp_path / "oversized.json"
+    report_path.write_bytes(b" " * 17)
+
+    result = runner.invoke(app, ["validate-report", str(report_path)])
+
+    assert result.exit_code == 2
+    assert "exceeds the maximum size" in result.output
+
+
 def test_analyze_rejects_unsupported_report_format(tmp_path):
     sample = tmp_path / "fixture.exe"
     sample.write_bytes(make_minimal_pe())

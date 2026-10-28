@@ -83,7 +83,7 @@ def test_rejects_symbolic_link(tmp_path):
 
     try:
         link.symlink_to(target)
-    except OSError, NotImplementedError:
+    except (OSError, NotImplementedError):
         pytest.skip("Symbolic links are unavailable in this environment")
 
     with pytest.raises(InputValidationError, match="Symbolic links"):

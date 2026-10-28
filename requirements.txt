@@ -4,6 +4,5 @@ pydantic
 typer
 rich
 PyYAML
-pytest
 python-dotenv
 yara-python

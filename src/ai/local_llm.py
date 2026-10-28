@@ -240,7 +240,7 @@ def explain_report(
             "status": "unavailable",
             "reason": "Local model service is unavailable.",
         }
-    except json.JSONDecodeError, UnicodeDecodeError, TypeError, ValueError:
+    except (json.JSONDecodeError, UnicodeDecodeError, TypeError, ValueError):
         return {
             "status": "rejected",
             "reason": "Local model returned invalid or unsupported output.",

@@ -37,6 +37,9 @@ from src.safety import (
     inspect_input,
 )
 
+MAX_REPORT_SIZE_BYTES = 25 * 1024 * 1024
+
+
 app = typer.Typer(
     name="malware-agent",
     help="Local-first defensive static analysis of Windows PE files.",
@@ -289,11 +292,26 @@ def validate_report_command(
     """Validate a JSON report against the canonical report schema."""
     try:
         resolved = report_path.expanduser().resolve()
-        report = json.loads(resolved.read_text(encoding="utf-8"))
+        if not resolved.is_file():
+            raise OSError("report path is not a regular file")
+
+        # Read at most one byte beyond the limit to bound memory use.
+        with resolved.open("rb") as stream:
+            raw = stream.read(MAX_REPORT_SIZE_BYTES + 1)
+
+        if len(raw) > MAX_REPORT_SIZE_BYTES:
+            typer.echo(
+                "Cannot read JSON report: exceeds the maximum size "
+                f"of {MAX_REPORT_SIZE_BYTES} bytes.",
+                err=True,
+            )
+            raise typer.Exit(code=2)
+
+        report = json.loads(raw.decode("utf-8"))
         if not isinstance(report, dict):
             raise ReportValidationError("Report root must be a JSON object.")
         validate_report(report)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         typer.echo(f"Cannot read JSON report: {exc}", err=True)
         raise typer.Exit(code=2) from exc
     except ReportValidationError as exc:
