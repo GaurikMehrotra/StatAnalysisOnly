@@ -313,3 +313,107 @@ def test_analyze_rejects_unsupported_report_format(tmp_path):
 
     assert result.exit_code == 2
     assert "Unsupported format" in result.output
+
+
+def test_ai_explanation_is_disabled_by_default(tmp_path, monkeypatch):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+
+    def unexpected(*args, **kwargs):
+        raise AssertionError("AI must not run unless --explain is supplied.")
+
+    monkeypatch.setattr("src.cli.explain_report", unexpected)
+    result = runner.invoke(app, ["analyze", str(sample)])
+
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert "ai_explanation" not in report
+    assert report["analysis_status"] == "completed"
+
+
+def test_cli_accepts_valid_ai_explanation(tmp_path, monkeypatch):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+
+    def fake_explanation(report, **kwargs):
+        evidence_id = report["evidence"][0]["id"]
+        return {
+            "status": "available",
+            "generated_by_ai": True,
+            "model": "test-model",
+            "summary": "A cautious explanation of static evidence.",
+            "claims": [
+                {
+                    "text": "A static observation was recorded.",
+                    "evidence_ids": [evidence_id],
+                }
+            ],
+            "limitations": (
+                "AI-generated explanation, not a verified detection. "
+                "Evidence references establish traceability, not factual correctness."
+            ),
+        }
+
+    monkeypatch.setattr("src.cli.explain_report", fake_explanation)
+    result = runner.invoke(app, ["analyze", str(sample), "--explain"])
+
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    explanation = report["ai_explanation"]
+    assert explanation["status"] == "available"
+    assert explanation["generated_by_ai"] is True
+    known_ids = {item["id"] for item in report["evidence"]}
+    for claim in explanation["claims"]:
+        assert set(claim["evidence_ids"]) <= known_ids
+
+
+def test_cli_ai_fallback_does_not_fail_analysis(tmp_path, monkeypatch):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+
+    monkeypatch.setattr(
+        "src.cli.explain_report",
+        lambda report, **kwargs: {
+            "status": "unavailable",
+            "reason": "Local model service is unavailable.",
+        },
+    )
+    result = runner.invoke(app, ["analyze", str(sample), "--explain"])
+
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert report["analysis_status"] == "completed"
+    assert report["ai_explanation"]["status"] == "unavailable"
+    assert report["findings"] == report["triage"]["findings"]
+
+
+def test_cli_ai_explanation_renders_in_markdown(tmp_path, monkeypatch):
+    sample = tmp_path / "fixture.exe"
+    sample.write_bytes(make_minimal_pe())
+
+    def fake_explanation(report, **kwargs):
+        return {
+            "status": "available",
+            "generated_by_ai": True,
+            "model": "test-model",
+            "summary": "A cautious explanation.",
+            "claims": [
+                {
+                    "text": "A static clue exists.",
+                    "evidence_ids": [report["evidence"][0]["id"]],
+                }
+            ],
+            "limitations": "Not a verified detection.",
+        }
+
+    monkeypatch.setattr("src.cli.explain_report", fake_explanation)
+    result = runner.invoke(
+        app,
+        ["analyze", str(sample), "--explain", "--format", "markdown"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "## Optional AI explanation" in result.output
+    assert "AI-generated content is not a verified detection" in result.output
+    assert "A cautious explanation." in result.output
+    assert "Evidence IDs:" in result.output

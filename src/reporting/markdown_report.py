@@ -156,6 +156,31 @@ def render_markdown_report(report: dict[str, Any]) -> str:
     else:
         lines.append("No candidate IOCs were extracted.")
 
+    ai = report.get("ai_explanation")
+    if ai:
+        lines.extend(["", "## Optional AI explanation", ""])
+        lines.append(
+            "> AI-generated content is not a verified detection. "
+            "Evidence references provide traceability, not proof of correctness."
+        )
+        lines.append("")
+        lines.append(f"- **Status:** {_text(ai.get('status'))}")
+        if ai.get("status") == "available":
+            lines.append(f"- **Model:** {_text(ai.get('model'))}")
+            lines.append("")
+            lines.append(f"**Summary:** {_text(ai.get('summary'))}")
+            lines.append("")
+            for claim in ai.get("claims", []):
+                refs = ", ".join(claim.get("evidence_ids", []))
+                lines.append(
+                    f"- {_text(claim.get('text'))} (Evidence IDs: {_text(refs)})"
+                )
+            lines.append("")
+            lines.append(f"- **Limitations:** {_text(ai.get('limitations'))}")
+        else:
+            lines.append(f"- **Reason:** {_text(ai.get('reason'))}")
+        lines.append("")
+
     lines.extend(["", "## Warnings and limitations", ""])
 
     if warnings:

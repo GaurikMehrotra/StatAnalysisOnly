@@ -31,6 +31,8 @@ not definitive malware verdicts.
 - A JSON report-validation CLI command.
 - A synthetic-fixture evaluation harness with report validity, repeatability,
   runtime, and regression metrics.
+- An optional local AI explanation mode with bounded structural context,
+  evidence-ID validation, and graceful fallback when the model is unavailable.
 
 ## Usage
 
@@ -62,6 +64,39 @@ Inspect commands and options:
 The input must exist and pass the input and PE validation checks. Output files
 are created exclusively; existing files are not overwritten.
 
+### Optional local AI explanations
+
+AI explanations are disabled by default. Deterministic findings and triage remain
+the primary analysis results; the optional model does not set or change the
+deterministic findings or triage score.
+
+To use the feature, install and start [Ollama](https://ollama.com/download)
+separately, then obtain the default model:
+
+    ollama pull llama3.2:3b
+
+With Ollama serving locally at `http://127.0.0.1:11434`, request an explanation:
+
+    python -m src.cli analyze ./sample.exe --explain
+    python -m src.cli analyze ./sample.exe --explain --model llama3.2:3b --format markdown
+
+The adapter accepts loopback endpoints only. Use `--model-url` to select a
+supported local loopback endpoint and `--ai-timeout` to set the request timeout.
+The default model is `llama3.2:3b`; see the command help for all options.
+
+The adapter sends bounded structural metadata and evidence identifiers to the
+local model, not raw file bytes, raw IOC values, file hashes, or free-text
+evidence descriptions. The application does not upload the sample or report
+through this feature. Installing or obtaining a model through Ollama may require
+network access.
+
+If the local service is unavailable, times out, or returns invalid output, the
+analysis report is still produced with an AI-explanation status or fallback
+reason. Accepted AI claims must reference evidence identifiers already present
+in the report. This provides traceability, not proof that an explanation is
+correct. AI-generated text is clearly labeled and must not be treated as a
+verified detection or as a replacement for analyst review.
+
 ## Evaluation
 
 Run the synthetic end-to-end evaluation:
@@ -83,6 +118,8 @@ precision, recall, or a meaningful real-world false-positive rate.
 - Submitted samples are never executed by this application.
 - The application performs static inspection only.
 - Samples and reports are not automatically uploaded by the analysis pipeline.
+- Optional AI explanations require a separately running local Ollama service;
+  model output is untrusted, may be incorrect, and does not establish maliciousness.
 - File extensions alone do not establish that a file is a valid PE.
 - Extracted strings, metadata, imports, and IOCs are untrusted evidence.
 - An imported function does not prove that the function is called at runtime.

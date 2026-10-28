@@ -6,6 +6,12 @@ from pathlib import Path
 
 import typer
 
+from src.ai.local_llm import (
+    DEFAULT_BASE_URL,
+    DEFAULT_MODEL,
+    DEFAULT_TIMEOUT_SECONDS,
+    explain_report,
+)
 from src.analyzers.import_analyzer import (
     ImportAnalysisError,
     analyze_imports_exports,
@@ -74,6 +80,28 @@ def analyze(
         "--format",
         help="Report format: json or markdown.",
         case_sensitive=False,
+    ),
+    explain: bool = typer.Option(
+        False,
+        "--explain",
+        help="Add an optional evidence-bounded local AI explanation.",
+    ),
+    model: str = typer.Option(
+        DEFAULT_MODEL,
+        "--model",
+        help="Local Ollama model name used with --explain.",
+    ),
+    model_url: str = typer.Option(
+        DEFAULT_BASE_URL,
+        "--model-url",
+        help="Local Ollama base URL used with --explain.",
+    ),
+    ai_timeout: float = typer.Option(
+        DEFAULT_TIMEOUT_SECONDS,
+        "--ai-timeout",
+        min=0.1,
+        max=120.0,
+        help="Local AI request timeout in seconds.",
     ),
 ) -> None:
     """Validate an input, parse PE metadata, and report the results."""
@@ -198,6 +226,15 @@ def analyze(
         "ioc_analysis": ioc_analysis,
         "warnings": warnings,
     }
+
+    # AI is strictly opt-in and cannot modify deterministic analysis fields.
+    if explain:
+        report["ai_explanation"] = explain_report(
+            report,
+            model=model,
+            base_url=model_url,
+            timeout=ai_timeout,
+        )
 
     try:
         # Both output formats must pass the canonical report schema first.
