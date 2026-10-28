@@ -6,6 +6,10 @@ from pathlib import Path
 
 import typer
 
+from src.analyzers.import_analyzer import (
+    ImportAnalysisError,
+    analyze_imports_exports,
+)
 from src.analyzers.pe_analyzer import PEAnalysisError, analyze_pe
 from src.analyzers.section_analyzer import analyze_sections
 from src.safety import (
@@ -82,6 +86,15 @@ def analyze(
         typer.echo(f"Section analysis rejected: {exc}", err=True)
         raise typer.Exit(code=2) from exc
 
+    try:
+        import_analysis = analyze_imports_exports(
+            file_path,
+            max_file_size=max_size_mib * 1024 * 1024,
+        )
+    except ImportAnalysisError as exc:
+        typer.echo(f"Import/export analysis rejected: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
     report = {
         "tool": {
             "name": "malware-analysis-agent",
@@ -91,10 +104,12 @@ def analyze(
         "input": identity_to_dict(identity),
         "pe_metadata": pe_metadata,
         "section_analysis": section_analysis,
+        "import_analysis": import_analysis,
         "warnings": [
             "PE metadata is static evidence, not proof of malicious behavior.",
             "PE timestamps are untrusted and may be forged.",
-            "Import/export and string/IOC analyzers are not yet integrated.",
+            "Import names are static evidence and do not prove runtime behavior.",
+            "String/IOC analysis is not yet integrated.",
             "Section entropy is a heuristic, not proof of maliciousness.",
             "Passing static analysis does not establish that a file is safe.",
         ],

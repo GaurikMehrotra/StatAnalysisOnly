@@ -57,6 +57,17 @@ def test_analyze_outputs_pe_metadata(tmp_path):
     assert report["pe_metadata"]["entry_point"] == 0x1000
     assert report["section_analysis"]["section_count"] == 0
     assert report["section_analysis"]["sections"] == []
+
+    imports = report["import_analysis"]
+    assert imports["import_library_count"] == 0
+    assert imports["imported_function_count"] == 0
+    assert imports["imports"] == []
+    assert imports["export_count"] == 0
+    assert imports["exports"] == []
+    assert isinstance(imports["warnings"], list)
+
+    assert any("Import names are static evidence" in warning
+               for warning in report["warnings"])
     assert report["warnings"]
 
 
@@ -109,3 +120,4 @@ def test_analyze_writes_json_report(tmp_path):
     report = json.loads(output.read_text())
     assert report["status"] == "static_analysis_completed"
     assert report["pe_metadata"]["architecture"] == "x86"
+    assert "import_analysis" in report
