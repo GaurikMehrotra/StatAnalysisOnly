@@ -6,6 +6,7 @@ from pathlib import Path
 
 import typer
 
+from src.analyzers.pe_analyzer import PEAnalysisError, analyze_pe
 from src.safety import (
     DEFAULT_MAX_FILE_SIZE,
     InputValidationError,
@@ -52,7 +53,7 @@ def analyze(
         help="Maximum accepted input size in MiB.",
     ),
 ) -> None:
-    """Validate an input and report its file identity."""
+    """Validate an input, parse PE metadata, and report the results."""
     try:
         identity = inspect_input(
             file_path,
@@ -62,17 +63,28 @@ def analyze(
         typer.echo(f"Input rejected: {exc}", err=True)
         raise typer.Exit(code=2) from exc
 
+    try:
+        pe_metadata = analyze_pe(
+            file_path,
+            max_file_size=max_size_mib * 1024 * 1024,
+        )
+    except PEAnalysisError as exc:
+        typer.echo(f"PE analysis rejected: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
     report = {
         "tool": {
             "name": "malware-analysis-agent",
             "version": get_tool_version(),
         },
-        "status": "input_gate_passed",
+        "status": "pe_metadata_extracted",
         "input": identity_to_dict(identity),
+        "pe_metadata": pe_metadata,
         "warnings": [
-            "The input gate checks file properties and extension only.",
-            "PE structural validation and static analyzers are not yet integrated.",
-            "Passing the input gate does not establish that a file is safe.",
+            "PE metadata is static evidence, not proof of malicious behavior.",
+            "PE timestamps are untrusted and may be forged.",
+            "Section, import, string, and entropy analyzers are not yet integrated.",
+            "Passing static analysis does not establish that a file is safe.",
         ],
     }
 
@@ -94,7 +106,6 @@ def analyze(
 
     try:
         destination.parent.mkdir(parents=True, exist_ok=True)
-
         # Exclusive creation prevents overwriting an existing report.
         with destination.open("x", encoding="utf-8") as report_file:
             report_file.write(rendered + "\n")
