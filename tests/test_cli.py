@@ -37,7 +37,15 @@ def make_minimal_pe():
     struct.pack_into("<H", optional, 68, 3)
     struct.pack_into("<I", optional, 92, 16)
 
-    return bytes(dos) + b"PE\0\0" + coff + bytes(optional)
+    return (
+        bytes(dos)
+        + b"PE\0\0"
+        + coff
+        + bytes(optional)
+        + b"\0https://updates.example.org/check\0"
+        + b"analyst@example.net\0"
+        + b"192.0.2.10\0"
+    )
 
 
 def test_analyze_outputs_pe_metadata(tmp_path):
@@ -66,8 +74,44 @@ def test_analyze_outputs_pe_metadata(tmp_path):
     assert imports["exports"] == []
     assert isinstance(imports["warnings"], list)
 
+    strings = report["string_analysis"]
+    assert strings["string_count"] > 0
+    assert any(
+        item["value"] == "https://updates.example.org/check"
+        for item in strings["strings"]
+    )
+
+    iocs = report["ioc_analysis"]
+    assert iocs["ioc_count"] > 0
+    assert any(
+        item["type"] == "url"
+        and item["value"] == "https://updates.example.org/check"
+        for item in iocs["iocs"]
+    )
+    assert any(
+        item["type"] == "domain"
+        and item["value"] == "updates.example.org"
+        for item in iocs["iocs"]
+    )
+    assert any(
+        item["type"] == "email" and item["value"] == "analyst@example.net"
+        for item in iocs["iocs"]
+    )
+    assert any(
+        item["type"] == "ipv4" and item["value"] == "192.0.2.10"
+        for item in iocs["iocs"]
+    )
+    assert iocs["truncated"] is False
+
     assert any("Import names are static evidence" in warning
                for warning in report["warnings"])
+    assert any(
+        "Extracted strings and IOCs are static indicators" in warning
+        for warning in report["warnings"]
+    )
+    assert not any(
+        "not yet integrated" in warning for warning in report["warnings"]
+    )
     assert report["warnings"]
 
 
@@ -121,3 +165,5 @@ def test_analyze_writes_json_report(tmp_path):
     assert report["status"] == "static_analysis_completed"
     assert report["pe_metadata"]["architecture"] == "x86"
     assert "import_analysis" in report
+    assert "string_analysis" in report
+    assert "ioc_analysis" in report

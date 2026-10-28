@@ -12,6 +12,8 @@ from src.analyzers.import_analyzer import (
 )
 from src.analyzers.pe_analyzer import PEAnalysisError, analyze_pe
 from src.analyzers.section_analyzer import analyze_sections
+from src.analyzers.string_analyzer import StringAnalysisError, analyze_strings
+from src.detection.ioc_extractor import IOCExtractionError, extract_iocs
 from src.safety import (
     DEFAULT_MAX_FILE_SIZE,
     InputValidationError,
@@ -95,6 +97,21 @@ def analyze(
         typer.echo(f"Import/export analysis rejected: {exc}", err=True)
         raise typer.Exit(code=2) from exc
 
+    try:
+        string_analysis = analyze_strings(
+            file_path,
+            max_file_size=max_size_mib * 1024 * 1024,
+        )
+    except StringAnalysisError as exc:
+        typer.echo(f"String analysis rejected: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
+    try:
+        ioc_analysis = extract_iocs(string_analysis["strings"])
+    except IOCExtractionError as exc:
+        typer.echo(f"IOC extraction rejected: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
     report = {
         "tool": {
             "name": "malware-analysis-agent",
@@ -105,11 +122,16 @@ def analyze(
         "pe_metadata": pe_metadata,
         "section_analysis": section_analysis,
         "import_analysis": import_analysis,
+        "string_analysis": string_analysis,
+        "ioc_analysis": ioc_analysis,
         "warnings": [
             "PE metadata is static evidence, not proof of malicious behavior.",
             "PE timestamps are untrusted and may be forged.",
             "Import names are static evidence and do not prove runtime behavior.",
-            "String/IOC analysis is not yet integrated.",
+            (
+                "Extracted strings and IOCs are static indicators, "
+                "not proof of maliciousness."
+            ),
             "Section entropy is a heuristic, not proof of maliciousness.",
             "Passing static analysis does not establish that a file is safe.",
         ],
