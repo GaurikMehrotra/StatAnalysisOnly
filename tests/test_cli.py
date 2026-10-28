@@ -49,12 +49,14 @@ def test_analyze_outputs_pe_metadata(tmp_path):
 
     assert result.exit_code == 0, result.output
     report = json.loads(result.output)
-    assert report["status"] == "pe_metadata_extracted"
+    assert report["status"] == "static_analysis_completed"
     assert report["input"]["filename"] == "fixture.exe"
     assert report["input"]["size_bytes"] == len(content)
     assert report["input"]["sha256"] == hashlib.sha256(content).hexdigest()
     assert report["pe_metadata"]["architecture"] == "x86"
     assert report["pe_metadata"]["entry_point"] == 0x1000
+    assert report["section_analysis"]["section_count"] == 0
+    assert report["section_analysis"]["sections"] == []
     assert report["warnings"]
 
 
@@ -105,5 +107,5 @@ def test_analyze_writes_json_report(tmp_path):
 
     assert result.exit_code == 0, result.output
     report = json.loads(output.read_text())
-    assert report["status"] == "pe_metadata_extracted"
+    assert report["status"] == "static_analysis_completed"
     assert report["pe_metadata"]["architecture"] == "x86"
